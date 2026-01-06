@@ -1,0 +1,10 @@
+[
+  {
+    "time": "2024-01-01T00:00:00Z",
+    "title": "Placeholder headline",
+    "summary": "Sample event to illustrate structure; replace with real-time alerts as needed.",
+    "source": "manual",
+    "url": "https://example.com/event",
+    "tags": ["placeholder", "demo"]
+  }
+]

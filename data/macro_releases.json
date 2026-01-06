@@ -1,0 +1,11 @@
+[
+  {
+    "indicator": "CPI (YoY)",
+    "release_datetime_utc": "2024-01-11T13:30:00Z",
+    "actual": "TBD",
+    "forecast": "TBD",
+    "previous": "TBD",
+    "source": "manual",
+    "notes": "Placeholder macro release row; update with real data when available."
+  }
+]
