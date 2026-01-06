@@ -1,0 +1,15 @@
+# python venv
+.venv/
+.venv*/
+venv/
+env/
+
+# python caches
+__pycache__/
+*.pyc
+
+# secrets
+.env
+
+# generated data
+data/market_snapshot.json
