@@ -1,0 +1,9 @@
+[
+  {"name": "SPX", "symbol": "^GSPC", "order": 0},
+  {"name": "NDX", "symbol": "^NDX", "order": 1},
+  {"name": "10Y", "symbol": "^TNX", "order": 2},
+  {"name": "DXY", "symbol": "DX-Y.NYB", "order": 3},
+  {"name": "WTI", "symbol": "CL=F", "order": 4},
+  {"name": "GOLD", "symbol": "GC=F", "order": 5},
+  {"name": "BTC", "symbol": "BTC-USD", "order": 6}
+]

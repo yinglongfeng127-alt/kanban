@@ -7,12 +7,12 @@ from typing import Any, Dict, List, Optional
 import pandas as pd
 import streamlit as st
 
+from market_config import load_market_instruments, market_display_order
+
 
 MARKET_FILE = Path("data/market_snapshot.json")
 MACRO_FILE = Path("data/macro_releases.json")
 EVENTS_FILE = Path("data/events.json")
-
-MARKET_DISPLAY_ORDER = ["SPX", "NDX", "10Y", "DXY", "WTI", "GOLD", "BTC"]
 
 
 @st.cache_data
@@ -82,7 +82,9 @@ def render_market() -> None:
         st.info("No market data available.")
         return
 
-    order_map = {name: idx for idx, name in enumerate(MARKET_DISPLAY_ORDER)}
+    instruments = load_market_instruments()
+    display_order = market_display_order(instruments)
+    order_map = {name: idx for idx, name in enumerate(display_order)}
     df["order"] = df["name"].map(order_map).fillna(len(order_map))
     df = df.sort_values(["order", "name"]).drop(columns=["order"])
 
