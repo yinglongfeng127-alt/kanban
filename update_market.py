@@ -10,6 +10,7 @@ from typing import Dict, List, Optional, Tuple
 
 import pandas as pd
 
+from market_config import load_market_instruments
 
 DATA_DIR = Path("data")
 MARKET_FILE = DATA_DIR / "market_snapshot.json"
@@ -21,15 +22,11 @@ class MarketInstrument:
     symbol: str
 
 
-MARKET_INSTRUMENTS: List[MarketInstrument] = [
-    MarketInstrument(name="SPX", symbol="^GSPC"),
-    MarketInstrument(name="NDX", symbol="^NDX"),
-    MarketInstrument(name="10Y", symbol="^TNX"),
-    MarketInstrument(name="DXY", symbol="DX-Y.NYB"),
-    MarketInstrument(name="WTI", symbol="CL=F"),
-    MarketInstrument(name="GOLD", symbol="GC=F"),
-    MarketInstrument(name="BTC", symbol="BTC-USD"),
-]
+def load_market_instrument_definitions() -> List[MarketInstrument]:
+    return [
+        MarketInstrument(name=item["name"], symbol=item["symbol"])
+        for item in load_market_instruments()
+    ]
 
 
 def pct_change(current: Optional[float], previous: Optional[float]) -> Optional[float]:
@@ -64,7 +61,9 @@ def suppress_yf_output() -> Tuple[StringIO, StringIO]:
     return suppress_ctx, stdout_buffer, stderr_buffer
 
 
-def fetch_all_history() -> Tuple[Optional[Dict[str, pd.Series]], Optional[str]]:
+def fetch_all_history(
+    instruments: List[MarketInstrument],
+) -> Tuple[Optional[Dict[str, pd.Series]], Optional[str]]:
     try:
         import yfinance as yf
     except Exception as exc:  # pragma: no cover - import failure path
@@ -72,7 +71,7 @@ def fetch_all_history() -> Tuple[Optional[Dict[str, pd.Series]], Optional[str]]:
 
     suppress_ctx, _, _ = suppress_yf_output()
     with suppress_ctx:
-        tickers = [i.symbol for i in MARKET_INSTRUMENTS]
+        tickers = [i.symbol for i in instruments]
         history = None
         periods = ["1y", "6mo", "3mo", "1mo"]
         for period in periods:
@@ -141,9 +140,9 @@ def fetch_all_history() -> Tuple[Optional[Dict[str, pd.Series]], Optional[str]]:
         if (
             close is not None
             and not close.dropna().empty
-            and len(MARKET_INSTRUMENTS) == 1
+            and len(instruments) == 1
         ):
-            series_map[MARKET_INSTRUMENTS[0].symbol] = close
+            series_map[instruments[0].symbol] = close
 
     return series_map, None
 
@@ -186,10 +185,11 @@ def fetch_market_entry(
 
 
 def build_snapshot() -> dict:
-    series_map, global_error = fetch_all_history()
+    instruments = load_market_instrument_definitions()
+    series_map, global_error = fetch_all_history(instruments)
     items = [
         fetch_market_entry(instrument, series_map or {}, global_error)
-        for instrument in MARKET_INSTRUMENTS
+        for instrument in instruments
     ]
     return {
         "updated_at": datetime.now(timezone.utc).isoformat(),
