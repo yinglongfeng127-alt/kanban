@@ -5,5 +5,6 @@
   {"name": "DXY", "symbol": "DX-Y.NYB", "order": 3},
   {"name": "WTI", "symbol": "CL=F", "order": 4},
   {"name": "GOLD", "symbol": "GC=F", "order": 5},
-  {"name": "BTC", "symbol": "BTC-USD", "order": 6}
+  {"name": "BTC", "symbol": "BTC-USD", "order": 6},
+  {"name": "5Y", "symbol": "^FVX", "order": 7}
 ]
