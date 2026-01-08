@@ -15,13 +15,14 @@ class MarketInstrumentConfig:
     name: str
     symbol: str
     order: Optional[int] = None
+    favorite: bool = False
 
 
 DEFAULT_MARKET_INSTRUMENTS: List[MarketInstrumentConfig] = [
-    MarketInstrumentConfig(name="SPX", symbol="^GSPC", order=0),
+    MarketInstrumentConfig(name="SPX", symbol="^GSPC", order=0, favorite=True),
     MarketInstrumentConfig(name="NDX", symbol="^NDX", order=1),
-    MarketInstrumentConfig(name="10Y", symbol="^TNX", order=2),
-    MarketInstrumentConfig(name="DXY", symbol="DX-Y.NYB", order=3),
+    MarketInstrumentConfig(name="10Y", symbol="^TNX", order=2, favorite=True),
+    MarketInstrumentConfig(name="DXY", symbol="DX-Y.NYB", order=3, favorite=True),
     MarketInstrumentConfig(name="WTI", symbol="CL=F", order=4),
     MarketInstrumentConfig(name="GOLD", symbol="GC=F", order=5),
     MarketInstrumentConfig(name="BTC", symbol="BTC-USD", order=6),
@@ -42,19 +43,26 @@ def _parse_market_config(raw: Any) -> List[MarketInstrumentConfig]:
         name = entry.get("name")
         symbol = entry.get("symbol")
         order = entry.get("order")
+        favorite_raw = entry.get("favorite", False)
         if not isinstance(name, str) or not name.strip():
             raise ValueError(f"entry {idx} missing name")
         if not isinstance(symbol, str) or not symbol.strip():
             raise ValueError(f"entry {idx} missing symbol")
         if order is not None and not isinstance(order, int):
             raise ValueError(f"entry {idx} order must be int")
+        if not isinstance(favorite_raw, bool):
+            raise ValueError(f"entry {idx} favorite must be bool")
         if name in seen_names:
             raise ValueError(f"duplicate name: {name}")
         if symbol in seen_symbols:
             raise ValueError(f"duplicate symbol: {symbol}")
         seen_names.add(name)
         seen_symbols.add(symbol)
-        items.append(MarketInstrumentConfig(name=name, symbol=symbol, order=order))
+        items.append(
+            MarketInstrumentConfig(
+                name=name, symbol=symbol, order=order, favorite=favorite_raw
+            )
+        )
 
     if not items:
         raise ValueError("market config is empty")

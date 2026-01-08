@@ -2,36 +2,55 @@
   {
     "name": "SPX",
     "symbol": "^GSPC",
-    "order": 0
+    "order": 0,
+    "favorite": true
   },
   {
     "name": "NASDAQ100",
     "symbol": "^NDX",
-    "order": 1
+    "order": 1,
+    "favorite": true
   },
   {
     "name": "10Y",
     "symbol": "^TNX",
-    "order": 2
-  },
-  {
-    "name": "DXY",
-    "symbol": "DX-Y.NYB",
-    "order": 3
+    "order": 2,
+    "favorite": true
   },
   {
     "name": "GOLD",
     "symbol": "GC=F",
-    "order": 5
+    "order": 5,
+    "favorite": true
   },
   {
     "name": "BTC",
     "symbol": "BTC-USD",
-    "order": 6
+    "order": 6,
+    "favorite": false
   },
   {
     "name": "5Y",
     "symbol": "^FVX",
-    "order": 7
+    "order": 7,
+    "favorite": false
+  },
+  {
+    "name": "WDC",
+    "symbol": "WDC",
+    "order": 8,
+    "favorite": false
+  },
+  {
+    "name": "Sandisk",
+    "symbol": "SNDK",
+    "order": 9,
+    "favorite": false
+  },
+  {
+    "name": "Tesla",
+    "symbol": "TSLA",
+    "order": 10,
+    "favorite": false
   }
 ]
