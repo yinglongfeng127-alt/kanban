@@ -148,6 +148,7 @@ def fetch_market_entry(
         "change_5d_pct": None,
         "change_20d_pct": None,
         "error": "",
+        "history": [],
     }
 
     if global_error:
@@ -163,11 +164,13 @@ def fetch_market_entry(
     day_ago = last_nth(closes, 1)
     five_ago = last_nth(closes, 5)
     twenty_ago = last_nth(closes, 20)
+    history = closes.dropna().tail(90)
 
     fields["price"] = latest
     fields["change_1d_pct"] = pct_change(latest, day_ago)
     fields["change_5d_pct"] = pct_change(latest, five_ago)
     fields["change_20d_pct"] = pct_change(latest, twenty_ago)
+    fields["history"] = [float(v) for v in history]
 
     return fields
 

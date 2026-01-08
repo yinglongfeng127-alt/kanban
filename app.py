@@ -40,6 +40,29 @@ def format_pct(value: Optional[float]) -> str:
     return f"{value:+.2f}%"
 
 
+def pct_background(value: float, max_abs: float = 5.0) -> str:
+    if pd.isna(value):
+        return ""
+    clipped = max(min(value, max_abs), -max_abs)
+    intensity = abs(clipped) / max_abs
+    base = "0, 153, 51" if value > 0 else "204, 0, 0"
+    alpha = 0.15 + 0.55 * intensity
+    return f"background-color: rgba({base}, {alpha}); color: #0f1115;"
+
+
+def style_changes(df: pd.DataFrame) -> pd.io.formats.style.Styler:
+    change_cols = [
+        col
+        for col in ["change_1d_pct", "change_5d_pct", "change_20d_pct"]
+        if col in df.columns
+    ]
+    styler = df.style.format(
+        {col: "{:+.2f}%" for col in change_cols},
+        na_rep="n/a",
+    )
+    return styler.applymap(pct_background, subset=change_cols)
+
+
 def load_market_snapshot() -> Optional[Dict[str, Any]]:
     data = load_json(MARKET_FILE)
     if not isinstance(data, dict):
@@ -179,6 +202,43 @@ def render_market() -> None:
 
     render_metrics(df)
 
+    if "history" in df.columns:
+        trend_cols = ["name", "price", "change_1d_pct", "history"]
+        st.markdown("**Trends**")
+        trend_df = df[trend_cols]
+        trend_styler = trend_df.style.format(
+            {"price": "{:,.2f}", "change_1d_pct": "{:+.2f}%"},
+            na_rep="n/a",
+        ).applymap(pct_background, subset=["change_1d_pct"])
+        st.dataframe(
+            trend_styler,
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "price": st.column_config.NumberColumn("Price", format="%.2f"),
+                "change_1d_pct": st.column_config.NumberColumn("1D %", format="%+.2f"),
+                "history": st.column_config.LineChartColumn(
+                    "Trend (last ~90d)",
+                    y_min=None,
+                    y_max=None,
+                ),
+            },
+        )
+
+    change_cols = [
+        "name",
+        "change_1d_pct",
+        "change_5d_pct",
+        "change_20d_pct",
+    ]
+    existing_change_cols = [col for col in change_cols if col in df.columns]
+    if existing_change_cols:
+        st.markdown("**Change heatmap**")
+        st.dataframe(
+            style_changes(df[existing_change_cols]),
+            use_container_width=True,
+            hide_index=True,
+        )
     display_cols = [
         "name",
         "symbol",
@@ -189,7 +249,8 @@ def render_market() -> None:
         "error",
     ]
     existing_cols = [col for col in display_cols if col in df.columns]
-    st.dataframe(df[existing_cols], use_container_width=True)
+    st.markdown("**Raw data**")
+    st.dataframe(df[existing_cols], use_container_width=True, hide_index=True)
     with st.expander("Edit instruments", expanded=False):
         render_instrument_admin()
 
