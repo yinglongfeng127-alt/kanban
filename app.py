@@ -216,6 +216,10 @@ def render_instrument_admin() -> None:
 
 
 def render_metrics(df: pd.DataFrame, metric_names: List[str]) -> None:
+    if not metric_names:
+        st.info("No favorite instruments selected.")
+        return
+
     cols = st.columns(len(metric_names))
     for col, name in zip(cols, metric_names):
         row = df[df["name"] == name]
