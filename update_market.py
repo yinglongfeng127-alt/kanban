@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import logging
-from dataclasses import dataclass
 from datetime import datetime, timezone
 from io import StringIO
 from pathlib import Path
@@ -10,26 +9,14 @@ from typing import Dict, List, Optional, Tuple
 
 import pandas as pd
 
+from market_config import MarketInstrumentConfig, load_market_instruments
+
 
 DATA_DIR = Path("data")
 MARKET_FILE = DATA_DIR / "market_snapshot.json"
 
 
-@dataclass(frozen=True)
-class MarketInstrument:
-    name: str
-    symbol: str
-
-
-MARKET_INSTRUMENTS: List[MarketInstrument] = [
-    MarketInstrument(name="SPX", symbol="^GSPC"),
-    MarketInstrument(name="NDX", symbol="^NDX"),
-    MarketInstrument(name="10Y", symbol="^TNX"),
-    MarketInstrument(name="DXY", symbol="DX-Y.NYB"),
-    MarketInstrument(name="WTI", symbol="CL=F"),
-    MarketInstrument(name="GOLD", symbol="GC=F"),
-    MarketInstrument(name="BTC", symbol="BTC-USD"),
-]
+MARKET_INSTRUMENTS: List[MarketInstrumentConfig] = load_market_instruments()
 
 
 def pct_change(current: Optional[float], previous: Optional[float]) -> Optional[float]:
@@ -149,7 +136,7 @@ def fetch_all_history() -> Tuple[Optional[Dict[str, pd.Series]], Optional[str]]:
 
 
 def fetch_market_entry(
-    instrument: MarketInstrument,
+    instrument: MarketInstrumentConfig,
     series_map: Dict[str, pd.Series],
     global_error: Optional[str],
 ) -> dict:
