@@ -7,7 +7,12 @@ from typing import Any, Dict, List, Optional
 import pandas as pd
 import streamlit as st
 
-from market_config import load_market_instruments, market_display_order
+from market_config import (
+    MARKET_CONFIG_PATH,
+    MarketInstrumentConfig,
+    load_market_instruments,
+    market_display_order,
+)
 
 
 MARKET_FILE = Path("data/market_snapshot.json")
@@ -47,6 +52,90 @@ def load_rows(path: Path) -> List[Dict[str, Any]]:
     if isinstance(data, list):
         return data
     return []
+
+
+def _serialize_instruments(
+    instruments: List[MarketInstrumentConfig],
+) -> List[Dict[str, Any]]:
+    return [
+        {
+            "name": instrument.name,
+            "symbol": instrument.symbol,
+            "order": instrument.order,
+        }
+        for instrument in instruments
+    ]
+
+
+def save_market_instruments(instruments: List[MarketInstrumentConfig]) -> None:
+    MARKET_CONFIG_PATH.write_text(
+        json.dumps(_serialize_instruments(instruments), indent=2)
+    )
+
+
+def render_instrument_admin() -> None:
+    st.subheader("Manage Instruments")
+    instruments = load_market_instruments()
+    if not instruments:
+        st.info("No instruments configured.")
+        return
+
+    df = pd.DataFrame(_serialize_instruments(instruments))
+    st.dataframe(df, use_container_width=True, hide_index=True)
+
+    st.caption(
+        "Add or remove instruments. After changes, rerun `python update_market.py` to refresh data."
+    )
+
+    with st.form("add_instrument"):
+        st.markdown("**Add instrument**")
+        name = st.text_input("Name").strip()
+        symbol = st.text_input("Symbol").strip()
+        order_raw = st.text_input("Order (optional, int)").strip()
+
+        add_submitted = st.form_submit_button("Add")
+        if add_submitted:
+            errors: List[str] = []
+            existing_names = {i.name for i in instruments}
+            existing_symbols = {i.symbol for i in instruments}
+
+            if not name:
+                errors.append("Name is required.")
+            if not symbol:
+                errors.append("Symbol is required.")
+            if name in existing_names:
+                errors.append(f"Name '{name}' already exists.")
+            if symbol in existing_symbols:
+                errors.append(f"Symbol '{symbol}' already exists.")
+
+            order_val: Optional[int] = None
+            if order_raw:
+                try:
+                    order_val = int(order_raw)
+                except ValueError:
+                    errors.append("Order must be an integer.")
+
+            if errors:
+                for msg in errors:
+                    st.error(msg)
+            else:
+                instruments.append(
+                    MarketInstrumentConfig(name=name, symbol=symbol, order=order_val)
+                )
+                save_market_instruments(instruments)
+                st.success(f"Added {name}. Rerunning to refresh view.")
+                st.experimental_rerun()
+
+    with st.form("remove_instrument"):
+        st.markdown("**Remove instrument**")
+        name_options = [inst.name for inst in instruments]
+        selected_name = st.selectbox("Select instrument", name_options)
+        remove_submitted = st.form_submit_button("Remove")
+        if remove_submitted:
+            updated = [inst for inst in instruments if inst.name != selected_name]
+            save_market_instruments(updated)
+            st.success(f"Removed {selected_name}. Rerunning to refresh view.")
+            st.experimental_rerun()
 
 
 def render_metrics(df: pd.DataFrame) -> None:
@@ -101,6 +190,8 @@ def render_market() -> None:
     ]
     existing_cols = [col for col in display_cols if col in df.columns]
     st.dataframe(df[existing_cols], use_container_width=True)
+    with st.expander("Edit instruments", expanded=False):
+        render_instrument_admin()
 
 
 def render_macro() -> None:
