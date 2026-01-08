@@ -63,6 +63,14 @@ def style_changes(df: pd.DataFrame) -> pd.io.formats.style.Styler:
     return styler.applymap(pct_background, subset=change_cols)
 
 
+def rerun() -> None:
+    """Compatibility wrapper for Streamlit rerun across versions."""
+    if hasattr(st, "experimental_rerun"):
+        st.experimental_rerun()
+    else:  # Streamlit >=1.30+
+        st.rerun()
+
+
 def load_market_snapshot() -> Optional[Dict[str, Any]]:
     data = load_json(MARKET_FILE)
     if not isinstance(data, dict):
@@ -85,6 +93,7 @@ def _serialize_instruments(
             "name": instrument.name,
             "symbol": instrument.symbol,
             "order": instrument.order,
+            "favorite": instrument.favorite,
         }
         for instrument in instruments
     ]
@@ -104,7 +113,46 @@ def render_instrument_admin() -> None:
         return
 
     df = pd.DataFrame(_serialize_instruments(instruments))
-    st.dataframe(df, use_container_width=True, hide_index=True)
+    st.markdown("**Current instruments** (edit favorites/order inline)")
+    edited_df = st.data_editor(
+        df,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "favorite": st.column_config.CheckboxColumn(
+                "Favorite", help="Pinned to top metrics strip", default=False
+            ),
+            "order": st.column_config.NumberColumn(
+                "Order", help="Optional integer for display ordering"
+            ),
+        },
+        disabled=["name", "symbol"],
+    )
+    if st.button("Save table changes"):
+        errors: List[str] = []
+        updated: List[MarketInstrumentConfig] = []
+        for row in edited_df.to_dict("records"):
+            order_val = row.get("order")
+            if order_val is not None:
+                if isinstance(order_val, float) and order_val.is_integer():
+                    order_val = int(order_val)
+                elif not isinstance(order_val, int):
+                    errors.append(f"Order for {row.get('name')} must be integer.")
+            updated.append(
+                MarketInstrumentConfig(
+                    name=row["name"],
+                    symbol=row["symbol"],
+                    order=order_val,
+                    favorite=bool(row.get("favorite", False)),
+                )
+            )
+        if errors:
+            for msg in errors:
+                st.error(msg)
+        else:
+            save_market_instruments(updated)
+            st.success("Saved table changes. Rerunning to refresh view.")
+            rerun()
 
     st.caption(
         "Add or remove instruments. After changes, rerun `python update_market.py` to refresh data."
@@ -115,6 +163,7 @@ def render_instrument_admin() -> None:
         name = st.text_input("Name").strip()
         symbol = st.text_input("Symbol").strip()
         order_raw = st.text_input("Order (optional, int)").strip()
+        favorite = st.checkbox("Favorite (pin to metrics)", value=False)
 
         add_submitted = st.form_submit_button("Add")
         if add_submitted:
@@ -143,11 +192,16 @@ def render_instrument_admin() -> None:
                     st.error(msg)
             else:
                 instruments.append(
-                    MarketInstrumentConfig(name=name, symbol=symbol, order=order_val)
+                    MarketInstrumentConfig(
+                        name=name,
+                        symbol=symbol,
+                        order=order_val,
+                        favorite=favorite,
+                    )
                 )
                 save_market_instruments(instruments)
                 st.success(f"Added {name}. Rerunning to refresh view.")
-                st.experimental_rerun()
+                rerun()
 
     with st.form("remove_instrument"):
         st.markdown("**Remove instrument**")
@@ -158,11 +212,14 @@ def render_instrument_admin() -> None:
             updated = [inst for inst in instruments if inst.name != selected_name]
             save_market_instruments(updated)
             st.success(f"Removed {selected_name}. Rerunning to refresh view.")
-            st.experimental_rerun()
+            rerun()
 
 
-def render_metrics(df: pd.DataFrame) -> None:
-    metric_names = ["SPX", "10Y", "DXY"]
+def render_metrics(df: pd.DataFrame, metric_names: List[str]) -> None:
+    if not metric_names:
+        st.info("No favorite instruments selected.")
+        return
+
     cols = st.columns(len(metric_names))
     for col, name in zip(cols, metric_names):
         row = df[df["name"] == name]
@@ -200,7 +257,10 @@ def render_market() -> None:
     df["order"] = df["name"].map(order_map).fillna(len(order_map))
     df = df.sort_values(["order", "name"]).drop(columns=["order"])
 
-    render_metrics(df)
+    favorites = [inst.name for inst in instruments if inst.favorite]
+    metric_names = favorites if favorites else display_order[:3]
+    metric_names = [name for name in metric_names if name in set(df["name"])]
+    render_metrics(df, metric_names)
 
     if "history" in df.columns:
         trend_cols = ["name", "price", "change_1d_pct", "history"]
