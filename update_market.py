@@ -175,16 +175,18 @@ def fetch_market_entry(
     return fields
 
 
-def build_snapshot() -> dict:
+def build_snapshot() -> tuple[dict, bool]:
     series_map, global_error = fetch_all_history()
     items = [
         fetch_market_entry(instrument, series_map or {}, global_error)
         for instrument in MARKET_INSTRUMENTS
     ]
-    return {
+    success = any(item.get("price") is not None for item in items)
+    snapshot = {
         "updated_at": datetime.now(timezone.utc).isoformat(),
         "items": items,
     }
+    return snapshot, success
 
 
 def ensure_data_dir() -> None:
@@ -197,7 +199,10 @@ def write_snapshot(snapshot: dict) -> None:
 
 
 def main() -> None:
-    snapshot = build_snapshot()
+    snapshot, success = build_snapshot()
+    if not success and MARKET_FILE.exists():
+        logging.warning("No market data fetched; keeping existing snapshot.")
+        return
     write_snapshot(snapshot)
 
 
